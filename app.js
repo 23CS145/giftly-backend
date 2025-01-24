@@ -5,7 +5,7 @@ const {v4:uuidv4}=require('uuid')
 const app=express()
 app.use(express.json())
 
-mongoose.connect('mongodb+srv://saranya:sara123@cluster21.tubv8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster21/giftly')
+mongoose.connect('mongodb+srv://saranya:sara123@cluster21.tubv8.mongodb.net//giftly')
 .then(()=>console.log("Connected to MongoDB"))
 .catch((err)=>console.log("Connection failed",err))
 

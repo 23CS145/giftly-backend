@@ -1,11 +1,16 @@
 const express=require('express')
 const mongoose=require('mongoose')
 const {v4:uuidv4}=require('uuid')
+const bcrypt=require('bcrypt')
+const jwt=require('jsonwebtoken')
+const cors=require('cors')
+const authMiddleware = require("./middleware/auth");
 
 const app=express()
 app.use(express.json())
+app.use(cors())
 
-mongoose.connect('mongodb+srv://saranya:sara123@cluster21.tubv8.mongodb.net//giftly')
+mongoose.connect('mongodb+srv://saranya:sara123@cluster21.tubv8.mongodb.net/giftly')
 .then(()=>console.log("Connected to MongoDB"))
 .catch((err)=>console.log("Connection failed",err))
 
@@ -35,33 +40,58 @@ const cartSchema=new mongoose.Schema({
 })
 const Cart=mongoose.model("Cart",cartSchema)
 
-app.post('/api/users/signup',async(req,res)=>{
-    try{
-    const{username,password,email}=req.body
-    const newUser=new User({user_id:uuidv4(),username,password,email})
-    const savedUser=await newUser.save()
-    res.status(201).json(newUser)
-    }catch(err){
-        res.status(404).send({message:'Internal Server error'})
-    }
+app.post('/signup',async(req,res)=>{
+  try{
+  const {username,email,password,confirm_password}=req.body
+  if(!username|| !email || !password || !confirm_password){
+    return res.status(400).json({message:"All fields are required"})
+  }
+  if(password!==confirm_password){
+    return res.status(400).json({message:"Passwords do not match"})
+  }
+  const user=await User.findOne({email})
+  if(user){
+    return res.status(400).json({message:"User already exists"})
+  }
+    const hashedPassword=await bcrypt.hash(password,10)
+    const newUser=new User({
+      user_id:uuidv4(),
+      username,
+      password: hashedPassword,
+      email
+    })
+    await newUser.save();
+    return res.status(201).json({message:'User registered successfully'})
+  }catch(error){
+    return res.status(500).json({message:"Internal Server error"})
+  }
 })
 
-app.post("/api/users/login", async (req, res) => {
+app.post("/login", async (req, res) => {
     try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email, password });
-      if (!user) return res.status(401).json({ message: "Invalid credentials" });
-        res.status(200).json(user);
-    } catch {
-        res.status(500).json({ message: "Internal Server Error" });
+    const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      const isValidPassword=await bcrypt.compare(password,user.password)
+      if(!isValidPassword){
+        return res.status(400).json({message:"Invalid password"});
+      }
+      const token=jwt.sign({user_id:user.user_id},"My_secret",{expiresIn:'1h'})
+      return res.status(200).json({token})
+    } catch(error) {
+      console.error(error)
+        return res.status(500).json({ message: "Internal Server Error" });
     }})
 
- app.get("/api/products", async (req, res) => {
+ app.get("/api/products", authMiddleware,async (req, res) => {
+  console.log(req.user)
     try {
         const products = await Products.find();
-        res.status(200).json(products);
+        return res.status(200).json(products);
         } catch {
-        res.status(500).json({ message: "Internal Server Error" });
+        return res.status(500).json({ message: "Internal Server Error" });
      }
 })
 
@@ -79,10 +109,10 @@ app.post("/api/products", async (req, res) => {
         image_url
       });
       await newProduct.save();
-      res.status(201).json(newProduct);
+      return res.status(201).json(newProduct);
     } catch (error) {
       console.error("Error saving product:", error.message);
-      res.status(500).json({ message: "Internal Server Error" });
+      return res.status(500).json({ message: "Internal Server Error" });
     }
   });
   
@@ -99,17 +129,78 @@ app.post("/api/products", async (req, res) => {
       await newCart.save();
       res.status(201).json(newCart);
     } catch {
-      res.status(500).json({ message: "Internal Server Error" });
+      return res.status(500).json({ message: "Internal Server Error" });
     }
   })
 
-  app.get("/api/carts/:user_id", async (req, res) => {
+  app.get("/api/carts/:user_id",authMiddleware, async (req, res) => {
+    console.log(req.user)
     try {
       const cartItems = await Cart.find({ user_id: req.params.user_id });
-      res.status(200).json(cartItems);
+      return res.status(200).json(cartItems);
     } catch {
-      res.status(500).json({ message: "Internal Server Error" });
+      return res.status(500).json({ message: "Internal Server Error" });
     }
+  })
+
+  app.put("/api/user/:user_id",async(req,res)=>{
+    try{
+    const {username,password}=req.body
+    if(!username || !password){
+      return res.status(400).json({message:'All fields are required'})
+    }
+    const hashedPassword=await bcrypt.hash(password,10)
+    const updatedUser=await User.findOneAndUpdate(
+      {user_id:req.params.user_id},
+      {
+        username,
+       password:hashedPassword},
+      {new:true}
+    )
+    if(!updatedUser){
+      return res.status(400).json({message:"User not found"})
+    }
+    return res.status(200).json({message:"User details Updated successfully",updatedUser})
+  }catch(error){
+    return res.status(500).json({message:"Internal Server error"})
+  }
+  })
+
+  app.put('/api/products/:product_id',async(req,res)=>{
+    try{
+    const {product_name,description,price,image_url}=req.body
+    const updatedProduct=await Products.findOneAndUpdate(
+      {product_id:req.params.product_id},
+      {product_name,
+      description,
+      price,
+      image_url},
+      {new:true}
+    )
+    if(!updatedProduct){
+      return res.status(400).json({message:"Product not found"})
+    }
+    return res.status(200).json({message:"Product Updated successfully",updatedProduct})
+  }catch(error){
+    return res.status(500).json({message:"Internal server error"})
+  }
+  })
+
+  app.put('/api/carts/:cart_id',async(req,res)=>{
+    try{
+    const {quantity}=req.body
+    const updatedCart=await Cart.findOneAndUpdate(
+      {cart_id:req.params.cart_id},
+      {quantity},
+      {new:true}
+    )
+    if(!updatedCart){
+      return res.send(400).json({message:"Cart item not found"})
+    }
+    return res.send(200).json({message:"Cart updated succesfully"})
+  }catch(error){
+    return res.send(500).json({message:"Internal server error"})
+  }
   })
 
 app.listen(3000,()=>{

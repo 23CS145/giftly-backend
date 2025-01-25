@@ -85,6 +85,27 @@ app.post("/login", async (req, res) => {
         return res.status(500).json({ message: "Internal Server Error" });
     }})
 
+    app.post("/api/products", async (req, res) => {
+      try {
+        const { product_name, description, price, image_url } = req.body;
+        if (!product_name || !description || !price || !image_url) {
+          return res.status(400).json({ message: "All fields are required" });
+        }
+        const newProduct = new Products({
+          product_id: uuidv4(),
+          product_name,
+          description,
+          price,
+          image_url
+        });
+        await newProduct.save();
+        return res.status(201).json(newProduct);
+      } catch (error) {
+        console.error("Error saving product:", error.message);
+        return res.status(500).json({ message: "Internal Server Error" });
+      }
+    });
+
  app.get("/api/products", authMiddleware,async (req, res) => {
   console.log(req.user)
     try {
@@ -95,27 +116,6 @@ app.post("/login", async (req, res) => {
      }
 })
 
-app.post("/api/products", async (req, res) => {
-    try {
-      const { product_name, description, price, image_url } = req.body;
-      if (!product_name || !description || !price || !image_url) {
-        return res.status(400).json({ message: "All fields are required" });
-      }
-      const newProduct = new Products({
-        product_id: uuidv4(),
-        product_name,
-        description,
-        price,
-        image_url
-      });
-      await newProduct.save();
-      return res.status(201).json(newProduct);
-    } catch (error) {
-      console.error("Error saving product:", error.message);
-      return res.status(500).json({ message: "Internal Server Error" });
-    }
-  });
-  
 
   app.post("/api/carts", async (req, res) => {
     try {
@@ -202,7 +202,46 @@ app.post("/api/products", async (req, res) => {
     return res.send(500).json({message:"Internal server error"})
   }
   })
+ 
+  app.delete('/api/user/:user_id',async (req,res)=>{
+    const {user_id}=req.params;
+    try{
+      const deletedUser=await User.findOneAndDelete({user_id})
+      if(!deletedUser){
+        return res.status(404).json({message:"User not found"})
+      }
+      res.status(200).json({message:"User deleted successfully"})
+    }catch(error){
+      return res.status(500).json({message:"Internal server error"})
+    }
+  })
 
+  app.delete('/api/carts/:cart_id',async(req,res)=>{
+    const {cart_id}=req.params
+    try{
+      const deletedCart=await Cart.findOneAndDelete({cart_id})
+      if(!deletedCart){
+        return res.status(400).json({message:'Cart item not found'})
+      } 
+      return res.status(200).json({message:'Cart item deleted successfully'})   
+
+    }catch(error){
+      return res.status(500).json({message:"Internal server error"})
+    }
+  })
+
+  app.delete('/api/products/:product_id',async(req,res)=>{
+    const {product_id}=req.params
+    try{
+      const deletedProduct=await Products.findOneAndDelete({product_id})
+      if(!deletedProduct){
+        return res.status(400).json({message:"Product not found"})
+      }
+      return res.status(200).json({message:"Product deleted successfully"})
+    }catch(error){
+      return res.status(500).json({message:"Internal Server error"})
+    }
+  })
 app.listen(3000,()=>{
     console.log("Server is running")
 })

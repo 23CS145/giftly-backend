@@ -70,19 +70,19 @@ app.post('/signup',async(req,res)=>{
 app.post("/login", async (req, res) => {
     try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
       if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({success: false, message: "Invalid credentials"  });
       }
       const isValidPassword=await bcrypt.compare(password,user.password)
       if(!isValidPassword){
-        return res.status(400).json({message:"Invalid password"});
+        return res.status(400).json({success: false, message: "Invalid credentials" });
       }
       const token=jwt.sign({user_id:user.user_id},"My_secret",{expiresIn:'1h'})
-      return res.status(200).json({token})
+      return res.status(200).json({ success: true, token, user })
     } catch(error) {
       console.error(error)
-        return res.status(500).json({ message: "Internal Server Error" });
+        return res.status(500).json({ success: false, message: "Internal Server Error"});
     }})
 
     app.post("/api/products", async (req, res) => {

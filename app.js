@@ -23,16 +23,16 @@ const userSchema=new mongoose.Schema({
 
 const User=mongoose.model("User",userSchema)
 
-const productSchema=new mongoose.Schema({
-    product_id: { type: String, required: true, unique: true },
-    product_name: { type: String, required: true },
-    description: { type: String, required: true },
-    old_price:{type:Number,required:true},
-    new_price:{type:Number,required:true},
-    price: { type: Number, required: true },
-    image_url: { type: String, required: true },
-    category:{type:String,required:true}
-})
+const productSchema = new mongoose.Schema({
+  product_id: { type: String, required: true, unique: true },
+  product_name: { type: String, required: true },
+  image_url: { type: String, required: true },
+  new_price: { type: Number, required: true },
+  old_price: { type: Number, required: true },  
+  category: { type: String, required: true },
+  description: { type: String, required: true }
+});
+
 const Products=mongoose.model("Products",productSchema)
 
 const cartSchema=new mongoose.Schema({
@@ -90,18 +90,18 @@ app.post("/login", async (req, res) => {
 
     app.post("/api/products", async (req, res) => {
       try {
-        const { product_name, description, price, image_url,category } = req.body;
-        if (!product_name || !description || !price || !image_url) {
+        const { product_name, image_url, new_price,old_price,category,description } = req.body;
+        if (!product_name || !image_url  || !new_price || !old_price|| category || !description) {
           return res.status(400).json({ message: "All fields are required" });
         }
         const newProduct = new Products({
           product_id: uuidv4(),
           product_name,
-          description,
-          old_price,
-          new_price,
           image_url,
-          category
+          new_price,
+          old_price,          
+          category,
+          description,
         });
         await newProduct.save();
         return res.status(201).json(newProduct);
@@ -177,11 +177,11 @@ app.post("/login", async (req, res) => {
     const updatedProduct=await Products.findOneAndUpdate(
       {product_id:req.params.product_id},
       {product_name,
-      description,
-      old_price,
-      new_price,
       image_url,
-      category},
+      new_price,
+      old_price,
+      category,
+      description},      
       {new:true}
     )
     if(!updatedProduct){

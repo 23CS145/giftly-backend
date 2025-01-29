@@ -91,7 +91,7 @@ app.post("/login", async (req, res) => {
     app.post("/api/products", async (req, res) => {
       try {
         const { product_name, image_url, new_price,old_price,category,description } = req.body;
-        if (!product_name || !image_url  || !new_price || !old_price|| category || !description) {
+        if (!product_name || !image_url  || !new_price || !old_price|| !category || !description) {
           return res.status(400).json({ message: "All fields are required" });
         }
         const newProduct = new Products({

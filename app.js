@@ -27,6 +27,8 @@ const productSchema=new mongoose.Schema({
     product_id: { type: String, required: true, unique: true },
     product_name: { type: String, required: true },
     description: { type: String, required: true },
+    old_price:{type:Number,required:true},
+    new_price:{type:Number,required:true},
     price: { type: Number, required: true },
     image_url: { type: String, required: true },
     category:{type:String,required:true}
@@ -96,7 +98,8 @@ app.post("/login", async (req, res) => {
           product_id: uuidv4(),
           product_name,
           description,
-          price,
+          old_price,
+          new_price,
           image_url,
           category
         });
@@ -175,7 +178,8 @@ app.post("/login", async (req, res) => {
       {product_id:req.params.product_id},
       {product_name,
       description,
-      price,
+      old_price,
+      new_price,
       image_url,
       category},
       {new:true}

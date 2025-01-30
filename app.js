@@ -111,7 +111,7 @@ app.post("/login", async (req, res) => {
       }
     });
 
- app.get("/api/products", authMiddleware,async (req, res) => {
+ app.get("/api/products",async (req, res) => {
   console.log(req.user)
     try {
         const products = await Products.find();

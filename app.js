@@ -122,9 +122,31 @@ app.post("/login", async (req, res) => {
 })
 
 
+  // app.post("/api/carts", async (req, res) => {
+  //   try {
+  //     const { user_id, product_id, quantity } = req.body;
+  //     const newCart = new Cart({
+  //       cart_id: uuidv4(),
+  //       user_id,
+  //       product_id,
+  //       quantity
+  //     });
+  //     await newCart.save();
+  //     res.status(201).json(newCart);
+  //   } catch {
+  //     return res.status(500).json({ message: "Internal Server Error" });
+  //   }
+  // })
+
   app.post("/api/carts", async (req, res) => {
     try {
       const { user_id, product_id, quantity } = req.body;
+      const existingCartItem = await Cart.findOne({ user_id, product_id });
+      if (existingCartItem) {
+        existingCartItem.quantity += quantity; 
+        await existingCartItem.save();
+        return res.status(200).json(existingCartItem);
+      }
       const newCart = new Cart({
         cart_id: uuidv4(),
         user_id,
@@ -133,10 +155,11 @@ app.post("/login", async (req, res) => {
       });
       await newCart.save();
       res.status(201).json(newCart);
-    } catch {
+    } catch (error) {
       return res.status(500).json({ message: "Internal Server Error" });
     }
-  })
+  });
+  
 
   app.get("/api/carts/:user_id",authMiddleware, async (req, res) => {
     console.log(req.user)

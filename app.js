@@ -121,24 +121,7 @@ app.post("/login", async (req, res) => {
      }
 })
 
-
-  // app.post("/api/carts", async (req, res) => {
-  //   try {
-  //     const { user_id, product_id, quantity } = req.body;
-  //     const newCart = new Cart({
-  //       cart_id: uuidv4(),
-  //       user_id,
-  //       product_id,
-  //       quantity
-  //     });
-  //     await newCart.save();
-  //     res.status(201).json(newCart);
-  //   } catch {
-  //     return res.status(500).json({ message: "Internal Server Error" });
-  //   }
-  // })
-
-  app.post("/api/carts", async (req, res) => {
+ app.post("/api/carts", async (req, res) => {
     try {
       const { user_id, product_id, quantity } = req.body;
       const existingCartItem = await Cart.findOne({ user_id, product_id });
@@ -245,33 +228,28 @@ app.post("/login", async (req, res) => {
       return res.status(500).json({message:"Internal server error"})
     }
   })
- 
-  app.delete('/api/carts/:cart_id',async(req,res)=>{
-    const {cart_id}=req.params
-    try{
-      const deletedCart=await Cart.findOneAndDelete({cart_id})
-      if(!deletedCart){
-        return res.status(400).json({message:'Cart item not found'})
-      } 
-      return res.status(200).json({message:'Cart item deleted successfully'})   
 
-    }catch(error){
-      return res.status(500).json({message:"Internal server error"})
+app.delete("/api/carts/:cart_id", async (req, res) => {
+  try {
+    const { cart_id } = req.params;
+    const cartItem = await Cart.findOne({ cart_id });
+    if (!cartItem) {
+      return res.status(400).json({ message: "Cart item not found" });
     }
-  })
+    if (cartItem.quantity > 1) {
+      cartItem.quantity -= 1;
+      await cartItem.save();
+      return res.status(200).json({ message: "Cart item quantity reduced", cartItem });
+    }
+    await Cart.findOneAndDelete({ cart_id });
+    return res.status(200).json({ message: "Cart item deleted successfully" });
 
-  app.delete('/api/products/:product_id',async(req,res)=>{
-    const {product_id}=req.params
-    try{
-      const deletedProduct=await Products.findOneAndDelete({product_id})
-      if(!deletedProduct){
-        return res.status(400).json({message:"Product not found"})
-      }
-      return res.status(200).json({message:"Product deleted successfully"})
-    }catch(error){
-      return res.status(500).json({message:"Internal Server error"})
-    }
-  })
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 app.listen(3000,()=>{
     console.log("Server is running")
 })
